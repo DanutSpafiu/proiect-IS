@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import spafi.springframework.magazinonline.dto.AuthResponse;
+import spafi.springframework.magazinonline.dto.LoginRequest;
 import spafi.springframework.magazinonline.dto.RegistrationRequest;
 import spafi.springframework.magazinonline.dto.UserResponse;
 import spafi.springframework.magazinonline.exception.ResourceNotFoundException;
@@ -43,6 +45,16 @@ public class AuthController {
     public ResponseEntity<UserResponse> registerSeller(@Valid @RequestBody RegistrationRequest request) {
         UserResponse response = UserResponse.from(authService.registerSeller(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Logs in with email + password and returns a JWT. Deactivated accounts and bad
+     * credentials are rejected; the token must then be sent as
+     * {@code Authorization: Bearer <token>} on subsequent requests.
+     */
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 
     /** Details of the currently authenticated account. */
