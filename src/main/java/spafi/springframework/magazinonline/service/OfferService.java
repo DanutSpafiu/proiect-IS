@@ -1,100 +1,123 @@
 package spafi.springframework.magazinonline.service;
 
+import java.util.List;
+import java.util.UUID;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import spafi.springframework.magazinonline.model.*;
-import spafi.springframework.magazinonline.repository.*;
+import spafi.springframework.magazinonline.dto.OfferRequest;
+import spafi.springframework.magazinonline.dto.OfferResponse;
+import spafi.springframework.magazinonline.exception.InvalidOperationException;
+import spafi.springframework.magazinonline.exception.ResourceNotFoundException;
+import spafi.springframework.magazinonline.model.Offer;
+import spafi.springframework.magazinonline.model.OfferStatus;
+import spafi.springframework.magazinonline.model.Product;
+import spafi.springframework.magazinonline.model.SaleType;
+import spafi.springframework.magazinonline.model.User;
+import spafi.springframework.magazinonline.repository.OfferRepository;
+import spafi.springframework.magazinonline.repository.ProductRepository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
+/**
+ * Offer lifecycle for negotiable products: buyers submit, sellers approve or reject.
+ */
 @Service
 public class OfferService {
 
     private final OfferRepository offerRepository;
     private final ProductRepository productRepository;
-    private final UserRepository userRepository;
-    private final SaleHistoryRepository saleHistoryRepository;
+    private final AccountService accountService;
 
-    public OfferService(OfferRepository offerRepository, ProductRepository productRepository,
-                        UserRepository userRepository, SaleHistoryRepository saleHistoryRepository) {
+    public OfferService(
+            OfferRepository offerRepository,
+            ProductRepository productRepository,
+            AccountService accountService) {
         this.offerRepository = offerRepository;
         this.productRepository = productRepository;
-        this.userRepository = userRepository;
-        this.saleHistoryRepository = saleHistoryRepository;
+        this.accountService = accountService;
     }
 
-    // 1. CUMPARATORUL TRIMITE OFERTA
-    public Offer trimiteOferta(Long buyerId, Long productId, Double proposedPrice) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produsul nu a fost gasit."));
+    /**
+     * Submit an offer on a negotiable product. An offer below the product's minimum
+     * price is rejected immediately and <em>never stored</em> (returned with a null
+     * reference); otherwise it is saved as {@code PENDING} for the seller to review.
+     */
+    @Transactional
+    public OfferResponse submitOffer(String buyerEmail, String productReference, OfferRequest request) {
+        User buyer = accountService.requireBuyer(buyerEmail);
+        Product product = requireProduct(productReference);
 
         if (product.getSaleType() != SaleType.NEGOTIABLE) {
-            throw new RuntimeException("Acest produs nu este negociabil.");
+            throw new InvalidOperationException("Offers are only allowed on negotiable products");
         }
 
-        if (proposedPrice < product.getMinimumPrice()) {
-            throw new RuntimeException("Oferta respinsa: Pretul propus este sub pretul minim.");
+        if (request.proposedPrice() < product.getMinimumPrice()) {
+            // Silent rejection: not persisted, not shown anywhere.
+            return OfferResponse.rejectedUnsaved(productReference, buyer.getEmail(), request.proposedPrice());
         }
 
-        User buyer = userRepository.findById(buyerId)
-                .orElseThrow(() -> new RuntimeException("Cumparatorul nu a fost gasit."));
-
-        Offer newOffer = Offer.builder()
+        Offer offer = Offer.builder()
+                .publicId(UUID.randomUUID())
                 .product(product)
                 .buyer(buyer)
-                .proposedPrice(proposedPrice)
+                .proposedPrice(request.proposedPrice())
                 .status(OfferStatus.PENDING)
                 .build();
-
-        return offerRepository.save(newOffer);
+        return OfferResponse.from(offerRepository.save(offer));
     }
 
-    // 2. VANZATORUL APROBA OFERTA
-    public void aprobaOferta(Long sellerId, Long offerId) {
-        Offer offer = offerRepository.findById(offerId)
-                .orElseThrow(() -> new RuntimeException("Oferta nu a fost gasita."));
-
-        // Verificam daca cel care aproba este chiar vanzatorul produsului
-        if (!offer.getProduct().getSeller().getId().equals(sellerId)) {
-            throw new RuntimeException("Doar vanzatorul produsului poate aproba oferta.");
-        }
-
-        offer.setStatus(OfferStatus.APPROVED);
-        offerRepository.save(offer);
-    }
-
-    // 3. CUMPARATORUL CUMPARA PRODUSUL (Istoric + Stergere)
     @Transactional
-    public void cumparaProdusNegociat(Long buyerId, Long offerId) {
-        Offer offer = offerRepository.findById(offerId)
-                .orElseThrow(() -> new RuntimeException("Oferta nu a fost gasita."));
+    public OfferResponse approveOffer(String sellerEmail, String offerReference) {
+        return decide(sellerEmail, offerReference, OfferStatus.APPROVED);
+    }
 
-        if (!offer.getBuyer().getId().equals(buyerId)) {
-            throw new RuntimeException("Doar cumparatorul care a facut oferta poate cumpara produsul.");
+    @Transactional
+    public OfferResponse rejectOffer(String sellerEmail, String offerReference) {
+        return decide(sellerEmail, offerReference, OfferStatus.REJECTED);
+    }
+
+    /** Offers across all of the seller's products. */
+    @Transactional(readOnly = true)
+    public List<OfferResponse> listOffersForSeller(String sellerEmail) {
+        User seller = accountService.requireApprovedSeller(sellerEmail);
+        return offerRepository.findByProduct_Seller(seller).stream()
+                .map(OfferResponse::from)
+                .toList();
+    }
+
+    /** A buyer's own offers and their statuses. */
+    @Transactional(readOnly = true)
+    public List<OfferResponse> listOffersForBuyer(String buyerEmail) {
+        User buyer = accountService.requireBuyer(buyerEmail);
+        return offerRepository.findByBuyer(buyer).stream()
+                .map(OfferResponse::from)
+                .toList();
+    }
+
+    private OfferResponse decide(String sellerEmail, String offerReference, OfferStatus newStatus) {
+        User seller = accountService.requireApprovedSeller(sellerEmail);
+        Offer offer = requireOffer(offerReference);
+        if (!offer.getProduct().getSeller().getId().equals(seller.getId())) {
+            throw new AccessDeniedException("You can only decide offers on your own products");
         }
-
-        if (offer.getStatus() != OfferStatus.APPROVED) {
-            throw new RuntimeException("Oferta nu a fost aprobata de vanzator inca.");
+        if (offer.getStatus() != OfferStatus.PENDING) {
+            throw new InvalidOperationException(
+                    "Offer has already been " + offer.getStatus().name().toLowerCase());
         }
+        offer.setStatus(newStatus);
+        return OfferResponse.from(offerRepository.save(offer));
+    }
 
-        Product product = offer.getProduct();
+    private Product requireProduct(String reference) {
+        UUID publicId = References.parse(reference, "product");
+        return productRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No product found with reference: " + reference));
+    }
 
-        // A. Inregistram vanzarea in istoric
-        SaleHistory istoric = SaleHistory.builder()
-                .productName(product.getName())
-                .productDescription(product.getDescription())
-                .finalPrice(offer.getProposedPrice())
-                .buyer(offer.getBuyer())
-                .seller(product.getSeller())
-                .soldAt(LocalDateTime.now())
-                .build();
-        saleHistoryRepository.save(istoric);
-
-        // B. Stergem produsul si ofertele asociate
-        // Baza de date ne obliga sa stergem intai ofertele, apoi produsul (regula Foreign Key)
-        List<Offer> oferteAsociate = offerRepository.findByProduct(product);
-        offerRepository.deleteAll(oferteAsociate);
-        productRepository.delete(product);
+    private Offer requireOffer(String reference) {
+        UUID publicId = References.parse(reference, "offer");
+        return offerRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No offer found with reference: " + reference));
     }
 }
