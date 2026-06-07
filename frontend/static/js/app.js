@@ -1,7 +1,8 @@
 /* =========================================================================
    MERIDIAN — page logic
-   Drives the header, public catalogue, auth forms, and the role-aware
-   dashboard. All data comes from the REST API via api.js.
+   Drives the header, storefront catalogue (with filters + search), auth forms,
+   and the role-aware account dashboard. All data comes from the REST API
+   via api.js.
    ========================================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -19,60 +20,111 @@ function initHeader() {
     const s = Session.get();
     if (s) {
         slot.innerHTML = `
-            <span class="whoami"><span class="dot"></span>${escapeHtml(s.email)} · ${s.role.toLowerCase()}</span>
-            <a class="link" href="/dashboard">Dashboard</a>
+            <span class="whoami"><span class="dot"></span><b>${escapeHtml(s.email)}</b> · ${s.role.toLowerCase()}</span>
+            <a class="link" href="/dashboard">My account</a>
             <button class="btn btn--ghost btn--sm" id="signout">Sign out</button>`;
         slot.querySelector("#signout").onclick = () => { Session.clear(); location.href = "/"; };
     } else {
-        slot.innerHTML = `<a class="link" href="/">Catalogue</a><a class="btn btn--sm" href="/auth">Sign in</a>`;
+        slot.innerHTML = `<a class="link" href="/">Shop</a><a class="btn btn--sm" href="/auth">Sign in</a>`;
     }
 }
 
 /* ---------------- Catalogue (index) ---------------- */
+const catalogue = { all: [], filter: "all", query: "" };
+
 async function initCatalogue() {
     const grid = document.getElementById("catalogue");
-    const chip = document.getElementById("catCount");
-    grid.innerHTML = skeletons(6);
+    grid.innerHTML = skeletons(8);
+
+    // Filter chips
+    document.querySelectorAll("#filters .chip").forEach(chip => {
+        chip.onclick = () => {
+            document.querySelectorAll("#filters .chip").forEach(c => c.classList.remove("active"));
+            chip.classList.add("active");
+            catalogue.filter = chip.dataset.filter;
+            renderCatalogue();
+        };
+    });
+
+    // Search box (lives in the top bar)
+    const search = document.getElementById("searchInput");
+    if (search) search.addEventListener("input", () => { catalogue.query = search.value.trim().toLowerCase(); renderCatalogue(); });
+
     try {
-        const products = await Api.products();
-        chip && (chip.textContent = `${products.length} ${products.length === 1 ? "lot" : "lots"} on the floor`);
-        if (!products.length) { grid.innerHTML = emptyState("The floor is quiet", "No products are listed right now."); return; }
-        grid.innerHTML = "";
-        products.forEach((p, i) => grid.appendChild(productCard(p, i)));
+        catalogue.all = await Api.products();
+        const stat = document.getElementById("statCount");
+        if (stat) stat.textContent = catalogue.all.length;
+        renderCatalogue();
     } catch (e) {
-        grid.innerHTML = emptyState("Couldn’t load the catalogue", e.message);
+        grid.innerHTML = emptyState("Couldn’t load the store", e.message);
     }
+}
+
+function renderCatalogue() {
+    const grid = document.getElementById("catalogue");
+    const chip = document.getElementById("catCount");
+
+    let items = catalogue.all;
+    if (catalogue.filter !== "all") items = items.filter(p => p.saleType === catalogue.filter);
+    if (catalogue.query) items = items.filter(p =>
+        (p.name || "").toLowerCase().includes(catalogue.query) ||
+        (p.description || "").toLowerCase().includes(catalogue.query));
+
+    if (chip) chip.textContent = `${items.length} ${items.length === 1 ? "product" : "products"}`;
+
+    if (!items.length) {
+        grid.innerHTML = catalogue.all.length
+            ? emptyState("No matches", "Try a different search or filter.")
+            : emptyState("The store is empty", "No products are listed right now. Check back soon.");
+        return;
+    }
+    grid.innerHTML = "";
+    items.forEach((p, i) => grid.appendChild(productCard(p, i)));
 }
 
 function productCard(p, i) {
     const isBuyer = Session.role === "BUYER";
     const negotiable = p.saleType === "NEGOTIABLE";
     const card = document.createElement("article");
-    card.className = "card reveal";
-    card.style.animationDelay = (i * 60) + "ms";
+    card.className = "product reveal";
+    card.style.animationDelay = (i % 8 * 50) + "ms";
 
     let actions = "";
-    if (isBuyer && negotiable) actions = `<button class="btn btn--accent btn--sm" data-act="offer">Make an offer</button>`;
-    else if (isBuyer && !negotiable) actions = `<button class="btn btn--accent btn--sm" data-act="buy">Buy now</button>`;
+    if (isBuyer && negotiable) actions = `<button class="btn btn--sm" data-act="offer">Make an offer</button>`;
+    else if (isBuyer && !negotiable) actions = `<button class="btn btn--sm" data-act="buy">Buy now</button>`;
     else if (!Session.get()) actions = `<a class="btn btn--ghost btn--sm" href="/auth">Sign in to ${negotiable ? "offer" : "buy"}</a>`;
 
+    const [c1, c2] = thumbColors(p.name);
+    const monogram = (p.name || "?").trim().charAt(0).toUpperCase();
+
     card.innerHTML = `
-        <div class="card__top">
-            <h3 class="card__name">${escapeHtml(p.name)}</h3>
-            <span class="tag ${negotiable ? "tag--negotiable" : "tag--fixed"}">${negotiable ? "open to offers" : "fixed price"}</span>
+        <div class="product__thumb" style="--c1:${c1};--c2:${c2}">
+            <span class="product__badge ${negotiable ? "badge--negotiable" : "badge--fixed"}">${negotiable ? "Negotiable" : "Fixed price"}</span>
+            <span class="product__monogram">${escapeHtml(monogram)}</span>
         </div>
-        <p class="card__desc">${escapeHtml(p.description || "")}</p>
-        <span class="card__seller">listed by ${escapeHtml(p.sellerEmail)}</span>
-        <div class="card__foot">
-            <span class="price">${money(p.price)}</span>
-        </div>
-        <div class="card__actions">${actions}</div>`;
+        <div class="product__body">
+            <span class="product__seller">${escapeHtml(p.sellerEmail)}</span>
+            <h3 class="product__name">${escapeHtml(p.name)}</h3>
+            <p class="product__desc">${escapeHtml(p.description || "No description provided.")}</p>
+            <div class="product__foot">
+                <span class="price">${money(p.price)}</span>
+                ${actions}
+            </div>
+        </div>`;
 
     const offerBtn = card.querySelector('[data-act="offer"]');
     const buyBtn = card.querySelector('[data-act="buy"]');
     if (offerBtn) offerBtn.onclick = () => makeOffer(p);
     if (buyBtn) buyBtn.onclick = () => buyNow(p);
     return card;
+}
+
+/* Deterministic pastel gradient from the product name — gives every card a
+   distinct, stable "cover" without needing real product images. */
+function thumbColors(name) {
+    let h = 0;
+    for (const ch of String(name || "")) h = (h * 31 + ch.charCodeAt(0)) % 360;
+    return [`hsl(${h} 62% 58%)`, `hsl(${(h + 42) % 360} 64% 52%)`];
 }
 
 async function makeOffer(p) {
@@ -83,7 +135,7 @@ async function makeOffer(p) {
         if (r.reference === null && r.status === "REJECTED") {
             toast("err", "Below minimum", "Your offer was below the seller’s minimum and was not recorded.");
         } else {
-            toast("ok", "Offer submitted", "Pending the seller’s review. Track it in your dashboard.");
+            toast("ok", "Offer submitted", "Pending the seller’s review. Track it in your account.");
         }
     } catch (e) { toast("err", "Couldn’t submit", e.message); }
 }
@@ -93,7 +145,7 @@ async function buyNow(p) {
     if (!ok) return;
     try {
         await Api.purchase(p.reference);
-        toast("ok", "Purchased", `“${p.name}” is yours. A receipt is in your dashboard.`);
+        toast("ok", "Purchased", `“${p.name}” is yours. Your receipt is in your account.`);
         initCatalogue();
     } catch (e) { toast("err", "Purchase failed", e.message); }
 }
@@ -131,7 +183,7 @@ function initAuth() {
                 await Api.registerBuyer(email, password);
                 const s = await Api.login(email, password);
                 Session.set(s);
-                toast("ok", "Account created", "You’re signed in. Happy browsing.");
+                toast("ok", "Account created", "You’re signed in. Happy shopping.");
                 setTimeout(() => location.href = "/dashboard", 600);
             } else {
                 await Api.registerSeller(email, password);
@@ -149,7 +201,7 @@ function initDashboard() {
     if (!s) { location.href = "/auth"; return; }
 
     document.getElementById("dashWho").textContent = s.email;
-    document.getElementById("dashRole").textContent = s.role;
+    document.getElementById("dashRole").textContent = s.role.toLowerCase();
 
     const tabsEl = document.getElementById("dashTabs");
     const panel = document.getElementById("dashPanel");
@@ -157,7 +209,7 @@ function initDashboard() {
     const views = {
         BUYER: [
             { id: "offers", label: "My offers", render: renderBuyerOffers },
-            { id: "purchases", label: "My purchases", render: renderBuyerPurchases },
+            { id: "purchases", label: "My orders", render: renderBuyerPurchases },
         ],
         SELLER: [
             { id: "listings", label: "My listings", render: renderSellerListings },
@@ -195,7 +247,7 @@ function initDashboard() {
 /* ----- Buyer panels ----- */
 async function renderBuyerOffers(panel) {
     const offers = await Api.myOffers();
-    if (!offers.length) return void (panel.innerHTML = emptyState("No offers yet", "Browse the catalogue and make an offer on a negotiable lot."));
+    if (!offers.length) return void (panel.innerHTML = emptyState("No offers yet", "Browse the store and make an offer on a negotiable product."));
     panel.innerHTML = `<div class="list"></div>`;
     const list = panel.querySelector(".list");
     offers.forEach(o => {
@@ -209,11 +261,11 @@ async function renderBuyerOffers(panel) {
             </div>
             <div class="row__actions">
                 ${stamp(o.status)}
-                ${canBuy ? `<button class="btn btn--accent btn--sm" data-buy="${o.productReference}">Complete purchase</button>` : ""}
+                ${canBuy ? `<button class="btn btn--sm" data-buy="${o.productReference}">Complete purchase</button>` : ""}
             </div>`;
         const buy = row.querySelector("[data-buy]");
         if (buy) buy.onclick = async () => {
-            try { await Api.purchase(o.productReference); toast("ok", "Purchased", "Your negotiated lot is yours."); renderBuyerOffers(panel); }
+            try { await Api.purchase(o.productReference); toast("ok", "Purchased", "Your negotiated product is yours."); renderBuyerOffers(panel); }
             catch (e) { toast("err", "Purchase failed", e.message); }
         };
         list.appendChild(row);
@@ -222,7 +274,7 @@ async function renderBuyerOffers(panel) {
 
 async function renderBuyerPurchases(panel) {
     const sales = await Api.myPurchases();
-    if (!sales.length) return void (panel.innerHTML = emptyState("No purchases yet", "Your receipts will appear here."));
+    if (!sales.length) return void (panel.innerHTML = emptyState("No orders yet", "Your receipts will appear here."));
     panel.innerHTML = `<div class="list"></div>`;
     const list = panel.querySelector(".list");
     sales.forEach(x => {
@@ -244,12 +296,12 @@ async function renderSellerListings(panel) {
     panel.innerHTML = `
         <div class="section-head" style="margin-bottom:1.2rem">
             <span class="count-chip">${products.length} active ${products.length === 1 ? "listing" : "listings"}</span>
-            <button class="btn btn--accent btn--sm" id="newListing">+ New listing</button>
+            <button class="btn btn--sm" id="newListing">+ New listing</button>
         </div>
         <div class="list"></div>`;
     panel.querySelector("#newListing").onclick = () => newListingModal(() => renderSellerListings(panel));
     const list = panel.querySelector(".list");
-    if (!products.length) { list.innerHTML = emptyState("Nothing listed", "Put your first product on the floor."); return; }
+    if (!products.length) { list.innerHTML = emptyState("Nothing listed", "Add your first product to the store."); return; }
     products.forEach(p => {
         const negotiable = p.saleType === "NEGOTIABLE";
         const row = document.createElement("div");
@@ -262,12 +314,12 @@ async function renderSellerListings(panel) {
             <div class="row__actions">
                 <span class="tag ${negotiable ? "tag--negotiable" : "tag--fixed"}">${negotiable ? "negotiable" : "fixed"}</span>
                 <span class="price">${money(p.price)}</span>
-                <button class="btn btn--danger btn--sm" data-cancel="${p.reference}">Cancel</button>
+                <button class="btn btn--danger btn--sm" data-cancel="${p.reference}">Remove</button>
             </div>`;
         row.querySelector("[data-cancel]").onclick = async () => {
-            if (!await confirmModal("Cancel listing", `Remove “${p.name}” from sale? Offers on it are discarded.`, "Cancel listing")) return;
-            try { await Api.cancelListing(p.reference); toast("ok", "Listing removed", `“${p.name}” is off the floor.`); renderSellerListings(panel); }
-            catch (e) { toast("err", "Couldn’t cancel", e.message); }
+            if (!await confirmModal("Remove listing", `Remove “${p.name}” from the store? Offers on it are discarded.`, "Remove listing")) return;
+            try { await Api.cancelListing(p.reference); toast("ok", "Listing removed", `“${p.name}” is no longer for sale.`); renderSellerListings(panel); }
+            catch (e) { toast("err", "Couldn’t remove", e.message); }
         };
         list.appendChild(row);
     });
@@ -275,7 +327,7 @@ async function renderSellerListings(panel) {
 
 async function renderSellerOffers(panel) {
     const offers = await Api.sellerOffers();
-    if (!offers.length) return void (panel.innerHTML = emptyState("No offers yet", "Offers on your negotiable lots show up here."));
+    if (!offers.length) return void (panel.innerHTML = emptyState("No offers yet", "Offers on your negotiable products show up here."));
     panel.innerHTML = `<div class="list"></div>`;
     const list = panel.querySelector(".list");
     offers.forEach(o => {
@@ -345,12 +397,12 @@ function stamp(status) {
     const cls = status === "APPROVED" ? "approved" : status === "REJECTED" ? "rejected" : "pending";
     return `<span class="stamp stamp--${cls}">${status.toLowerCase()}</span>`;
 }
-function skeletons(n) { return Array.from({ length: n }, () => `<div class="card skeleton" style="height:210px;border:0"></div>`).join(""); }
+function skeletons(n) { return Array.from({ length: n }, () => `<div class="product skeleton" style="height:330px;border:0"></div>`).join(""); }
 function skeletonRows(n) { return Array.from({ length: n }, () => `<div class="row skeleton" style="height:64px;border:0"></div>`).join(""); }
-function emptyState(title, sub) { return `<div class="empty"><span class="serif-italic">${escapeHtml(title)}</span>${escapeHtml(sub || "")}</div>`; }
+function emptyState(title, sub) { return `<div class="empty"><span class="empty__title">${escapeHtml(title)}</span>${escapeHtml(sub || "")}</div>`; }
 function noticeBanner(msg) {
-    return `<div class="panel" style="border-left:3px solid var(--pending)">
-        <span class="eyebrow">Awaiting approval</span>
+    return `<div class="panel" style="border-left:4px solid var(--pending)">
+        <span class="eyebrow" style="color:var(--pending)">Awaiting approval</span>
         <p style="margin-top:.5rem;color:var(--ink-soft)">${escapeHtml(msg)}</p></div>`;
 }
 function fmtDate(s) { try { return new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); } catch { return s; } }
@@ -375,7 +427,7 @@ function priceModal(title, subtitle, label) {
             <input name="price" type="number" min="0.01" step="0.01" required autofocus></div>
             <div class="role-toggle" style="margin-top:.5rem">
                 <button type="button" class="btn btn--ghost" data-x style="flex:1">Cancel</button>
-                <button type="submit" class="btn btn--accent" style="flex:1">Submit</button>
+                <button type="submit" class="btn" style="flex:1">Submit</button>
             </div></form>`, (m, close) => {
             m.querySelector("[data-x]").onclick = () => { close(); resolve(null); };
             m.querySelector("form").onsubmit = e => { e.preventDefault(); const v = parseFloat(m.querySelector('[name="price"]').value); close(); resolve(isNaN(v) ? null : v); };
@@ -389,7 +441,7 @@ function confirmModal(title, subtitle, confirmLabel) {
             <h3>${escapeHtml(title)}</h3><p>${escapeHtml(subtitle)}</p>
             <div class="role-toggle">
                 <button class="btn btn--ghost" data-x style="flex:1">Cancel</button>
-                <button class="btn btn--accent" data-ok style="flex:1">${escapeHtml(confirmLabel)}</button>
+                <button class="btn" data-ok style="flex:1">${escapeHtml(confirmLabel)}</button>
             </div>`, (m, close) => {
             m.querySelector("[data-x]").onclick = () => { close(); resolve(false); };
             m.querySelector("[data-ok]").onclick = () => { close(); resolve(true); };
@@ -399,7 +451,7 @@ function confirmModal(title, subtitle, confirmLabel) {
 
 function newListingModal(onDone) {
     showModal(`
-        <h3>New listing</h3><p>Put a product on the floor.</p>
+        <h3>New listing</h3><p>Add a product to the store.</p>
         <form id="lf">
             <div class="field"><label>Name</label><input name="name" required></div>
             <div class="field"><label>Description</label><input name="description"></div>
@@ -409,7 +461,7 @@ function newListingModal(onDone) {
             <div class="field" id="minWrap" style="display:none"><label>Minimum price (private)</label><input name="minimumPrice" type="number" min="0.01" step="0.01"></div>
             <div class="role-toggle" style="margin-top:.3rem">
                 <button type="button" class="btn btn--ghost" data-x style="flex:1">Cancel</button>
-                <button type="submit" class="btn btn--accent" style="flex:1">List it</button>
+                <button type="submit" class="btn" style="flex:1">List it</button>
             </div>
         </form>`, (m, close) => {
         const f = m.querySelector("#lf"), minWrap = m.querySelector("#minWrap");
@@ -424,7 +476,7 @@ function newListingModal(onDone) {
                 saleType: f.saleType.value,
                 minimumPrice: f.saleType.value === "NEGOTIABLE" ? parseFloat(f.minimumPrice.value) : null,
             };
-            try { await Api.createProduct(body); close(); toast("ok", "Listed", `“${body.name}” is on the floor.`); onDone && onDone(); }
+            try { await Api.createProduct(body); close(); toast("ok", "Listed", `“${body.name}” is now in the store.`); onDone && onDone(); }
             catch (err) { toast("err", "Couldn’t list", err.message); }
         };
     });
