@@ -17,9 +17,6 @@ import spafi.springframework.magazinonline.model.User;
 import spafi.springframework.magazinonline.repository.OfferRepository;
 import spafi.springframework.magazinonline.repository.ProductRepository;
 
-/**
- * Offer lifecycle for negotiable products: buyers submit, sellers approve or reject.
- */
 @Service
 public class OfferService {
 
@@ -36,11 +33,6 @@ public class OfferService {
         this.accountService = accountService;
     }
 
-    /**
-     * Submit an offer on a negotiable product. An offer below the product's minimum
-     * price is rejected immediately and <em>never stored</em> (returned with a null
-     * reference); otherwise it is saved as {@code PENDING} for the seller to review.
-     */
     @Transactional
     public OfferResponse submitOffer(String buyerEmail, String productReference, OfferRequest request) {
         User buyer = accountService.requireBuyer(buyerEmail);
@@ -51,7 +43,7 @@ public class OfferService {
         }
 
         if (request.proposedPrice() < product.getMinimumPrice()) {
-            // Silent rejection: not persisted, not shown anywhere.
+
             return OfferResponse.rejectedUnsaved(productReference, buyer.getEmail(), request.proposedPrice());
         }
 
@@ -75,7 +67,6 @@ public class OfferService {
         return decide(sellerEmail, offerReference, OfferStatus.REJECTED);
     }
 
-    /** Offers across all of the seller's products. */
     @Transactional(readOnly = true)
     public List<OfferResponse> listOffersForSeller(String sellerEmail) {
         User seller = accountService.requireApprovedSeller(sellerEmail);
@@ -84,7 +75,6 @@ public class OfferService {
                 .toList();
     }
 
-    /** A buyer's own offers and their statuses. */
     @Transactional(readOnly = true)
     public List<OfferResponse> listOffersForBuyer(String buyerEmail) {
         User buyer = accountService.requireBuyer(buyerEmail);

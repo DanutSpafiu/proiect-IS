@@ -18,13 +18,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * An offer submitted by a buyer on a {@link SaleType#NEGOTIABLE} product.
- *
- * <p>Per the requirements, offers below the product's minimum price are rejected
- * immediately and never persisted, so any stored offer has a proposed price that
- * meets or exceeds the minimum.
- */
 @Entity
 @Table(name = "offers")
 @Getter
@@ -38,7 +31,6 @@ public class Offer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Public handle used in API requests/responses instead of the numeric {@link #id}. */
     @Column(nullable = false, unique = true, updatable = false)
     private UUID publicId;
 

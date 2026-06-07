@@ -9,9 +9,6 @@ import spafi.springframework.magazinonline.model.Role;
 import spafi.springframework.magazinonline.model.User;
 import spafi.springframework.magazinonline.repository.UserRepository;
 
-/**
- * Admin-only operations over seller accounts: viewing, approving and deactivating.
- */
 @Service
 public class AdminService {
 
@@ -32,10 +29,6 @@ public class AdminService {
         return userRepository.save(seller);
     }
 
-    /**
-     * Deactivates a seller. The record stays in the database, but the {@code active}
-     * flag now blocks login (enforced in the security layer).
-     */
     @Transactional
     public User deactivateSeller(String email) {
         User seller = requireSeller(email);

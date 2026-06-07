@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('MERIDIAN — dashboard')}"></head>
+<body data-page="dashboard">
+
+<header th:replace="~{fragments/layout :: topbar}"></header>
+
+<main class="wrap">
+    <section class="dash-head">
+        <span class="eyebrow">your counter · <span id="dashRole">—</span></span>
+        <h1 style="font-size:clamp(2.2rem,5vw,3.4rem);margin-top:.4rem">
+            Ledger for <span class="serif-italic" id="dashWho" style="color:var(--accent);font-size:.8em">—</span>
+        </h1>
+    </section>
+
+    <div class="dash-tabs" id="dashTabs"><!-- tabs injected by app.js --></div>
+    <div id="dashPanel"><!-- panel injected by app.js --></div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

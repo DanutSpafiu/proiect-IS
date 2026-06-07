@@ -17,10 +17,6 @@ import spafi.springframework.magazinonline.dto.SaleHistoryResponse;
 import spafi.springframework.magazinonline.service.OfferService;
 import spafi.springframework.magazinonline.service.PurchaseService;
 
-/**
- * Buyer operations: purchasing products, submitting offers, and viewing own
- * offers/purchases. Restricted to ROLE_BUYER by the security config.
- */
 @RestController
 @RequestMapping("/api/buyer")
 public class BuyerController {
@@ -33,10 +29,6 @@ public class BuyerController {
         this.offerService = offerService;
     }
 
-    /**
-     * Purchase a product. Fixed-price products sell at the listed price; negotiable
-     * products require an already-approved offer from this buyer.
-     */
     @PostMapping("/products/{reference}/purchase")
     public ResponseEntity<SaleHistoryResponse> purchase(
             @PathVariable String reference, Principal principal) {
@@ -44,7 +36,6 @@ public class BuyerController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /** Submit an offer on a negotiable product. */
     @PostMapping("/products/{reference}/offers")
     public ResponseEntity<OfferResponse> submitOffer(
             @PathVariable String reference,
@@ -53,13 +44,11 @@ public class BuyerController {
         return ResponseEntity.ok(offerService.submitOffer(principal.getName(), reference, request));
     }
 
-    /** View the buyer's own offers and their statuses. */
     @GetMapping("/offers")
     public ResponseEntity<List<OfferResponse>> listOffers(Principal principal) {
         return ResponseEntity.ok(offerService.listOffersForBuyer(principal.getName()));
     }
 
-    /** View the buyer's completed purchases. */
     @GetMapping("/purchases")
     public ResponseEntity<List<SaleHistoryResponse>> listPurchases(Principal principal) {
         return ResponseEntity.ok(purchaseService.listPurchases(principal.getName()));

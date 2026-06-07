@@ -12,13 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import spafi.springframework.magazinonline.model.User;
 
-/**
- * Issues and validates the signed JWTs used for stateless authentication.
- *
- * <p>Tokens carry the user's email as the subject and the role as a claim, are
- * signed with HMAC-SHA256 using the configured secret, and expire after the
- * configured lifetime.
- */
 @Service
 public class JwtService {
 
@@ -32,7 +25,6 @@ public class JwtService {
         this.expirationMs = expirationMs;
     }
 
-    /** Builds a freshly-signed token for the given user. */
     public String generateToken(User user) {
         Instant now = Instant.now();
         return Jwts.builder()
@@ -44,12 +36,10 @@ public class JwtService {
                 .compact();
     }
 
-    /** Extracts the email (subject) from a verified token. */
     public String extractEmail(String token) {
         return parse(token).getSubject();
     }
 
-    /** Returns {@code true} only if the token's signature and expiry check out. */
     public boolean isValid(String token) {
         try {
             parse(token);

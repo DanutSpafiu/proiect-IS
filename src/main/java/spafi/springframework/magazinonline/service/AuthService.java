@@ -15,11 +15,6 @@ import spafi.springframework.magazinonline.model.User;
 import spafi.springframework.magazinonline.repository.UserRepository;
 import spafi.springframework.magazinonline.security.JwtService;
 
-/**
- * Handles account creation for the two self-service flows — buyer registration
- * (immediately usable) and seller account requests (pending admin approval) — plus
- * login, which validates credentials and issues a JWT.
- */
 @Service
 public class AuthService {
 
@@ -39,14 +34,6 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    /**
-     * Authenticates the supplied credentials and returns a signed JWT.
-     *
-     * <p>The {@link AuthenticationManager} rejects bad credentials
-     * ({@code BadCredentialsException}) and deactivated accounts
-     * ({@code DisabledException}); both surface as a failed login. Unapproved
-     * sellers <em>can</em> log in — approval only gates listing products.
-     */
     public AuthResponse login(LoginRequest request) {
         String email = request.email().trim().toLowerCase();
         authenticationManager.authenticate(
@@ -57,16 +44,11 @@ public class AuthService {
         return new AuthResponse(token, user.getEmail(), user.getRole());
     }
 
-    /** Buyers are active and approved immediately — no admin gate. */
     @Transactional
     public User registerBuyer(RegistrationRequest request) {
         return createUser(request, Role.BUYER, true);
     }
 
-    /**
-     * Sellers are created active but <em>not</em> approved; they may log in but
-     * cannot list products until an admin approves the account.
-     */
     @Transactional
     public User registerSeller(RegistrationRequest request) {
         return createUser(request, Role.SELLER, false);

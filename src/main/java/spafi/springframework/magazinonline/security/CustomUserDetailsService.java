@@ -8,14 +8,6 @@ import org.springframework.stereotype.Service;
 import spafi.springframework.magazinonline.model.User;
 import spafi.springframework.magazinonline.repository.UserRepository;
 
-/**
- * Bridges our {@link User} entity to Spring Security.
- *
- * <p>The account's {@code active} flag is mapped onto {@code enabled}: a deactivated
- * seller is therefore rejected at authentication time with a {@code DisabledException},
- * satisfying the rule that a deactivated seller cannot log in even though the record
- * still exists.
- */
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 

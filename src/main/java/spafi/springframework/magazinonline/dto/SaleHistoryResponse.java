@@ -3,9 +3,6 @@ package spafi.springframework.magazinonline.dto;
 import java.time.LocalDateTime;
 import spafi.springframework.magazinonline.model.SaleHistory;
 
-/**
- * View of a completed sale. References buyer and seller by email only.
- */
 public record SaleHistoryResponse(
         String productName,
         String productDescription,

@@ -13,9 +13,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * Turns exceptions into consistent JSON error bodies instead of leaking stack traces.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -42,13 +39,11 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.FORBIDDEN, message);
     }
 
-    /** A deactivated account tried to log in — blocked, but the record still exists. */
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<Map<String, Object>> handleDisabled(DisabledException ex) {
         return body(HttpStatus.FORBIDDEN, "This account has been deactivated");
     }
 
-    /** Any other failed login (bad credentials, unknown user). */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthentication(AuthenticationException ex) {
         return body(HttpStatus.UNAUTHORIZED, "Invalid email or password");

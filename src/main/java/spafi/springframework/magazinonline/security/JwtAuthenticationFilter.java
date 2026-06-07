@@ -12,15 +12,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Runs once per request: if a valid {@code Authorization: Bearer <jwt>} header is
- * present, it loads the account and populates the {@link SecurityContextHolder} so
- * downstream authorization rules apply.
- *
- * <p>The account is re-loaded from the database on every request, so a seller who is
- * deactivated after a token was issued is rejected immediately — a still-valid token
- * is not enough on its own.
- */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -62,8 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         try {
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-            // Reject tokens belonging to an account that is now disabled (e.g. a
-            // deactivated seller) even if the token itself is still unexpired.
+
             if (!userDetails.isEnabled()) {
                 return;
             }
@@ -72,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             userDetails, null, userDetails.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (UsernameNotFoundException ex) {
-            // Account no longer exists — leave the request unauthenticated.
+
         }
     }
 }

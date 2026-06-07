@@ -16,10 +16,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Immutable record written when a product is sold. The product itself (and its
- * offers) are deleted on sale, so name/description are snapshotted here.
- */
 @Entity
 @Table(name = "sale_history")
 @Getter

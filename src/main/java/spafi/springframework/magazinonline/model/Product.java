@@ -18,12 +18,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * A product listed for sale.
- *
- * <p>Both {@code id} and {@code minimumPrice} must never be exposed in API responses
- * (see the requirements); response DTOs handle that filtering, not this entity.
- */
 @Entity
 @Table(name = "products")
 @Getter
@@ -37,10 +31,6 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Stable public handle used in API requests/responses, so the internal numeric
-     * {@link #id} is never exposed (requirement: product id is never returned).
-     */
     @Column(nullable = false, unique = true, updatable = false)
     private UUID publicId;
 
@@ -61,6 +51,5 @@ public class Product {
     @Column(nullable = false)
     private SaleType saleType;
 
-    /** Only set for {@link SaleType#NEGOTIABLE} products. Never exposed in responses. */
     private Double minimumPrice;
 }

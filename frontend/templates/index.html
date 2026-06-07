@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('MERIDIAN — online marketplace')}"></head>
+<body data-page="index">
+
+<header th:replace="~{fragments/layout :: topbar}"></header>
+
+<main class="wrap">
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero__grid">
+            <div>
+                <span class="eyebrow">fixed price &amp; negotiated lots</span>
+                <h1>The floor is<br/><span class="accent serif-italic">open.</span></h1>
+                <p class="hero__lead">
+                    A marketplace where sellers list, buyers bid, and a price is a conversation.
+                    Browse the lots below — buy outright, or make your case with an offer.
+                </p>
+            </div>
+            <div class="hero__meta">
+                <div><b>BUYERS</b> — register freely, buy or negotiate</div>
+                <div><b>SELLERS</b> — request a stall, await approval, then list</div>
+                <div><b>EVERY LOT</b> — fixed or open to offers</div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="rule"/>
+
+    <!-- Catalogue -->
+    <section>
+        <div class="section-head">
+            <h2>On the floor</h2>
+            <span class="count-chip" id="catCount">loading…</span>
+        </div>
+        <div class="grid" id="catalogue"><!-- filled by app.js --></div>
+    </section>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
