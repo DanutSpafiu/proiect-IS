@@ -15,9 +15,6 @@ import spafi.springframework.magazinonline.model.User;
 import spafi.springframework.magazinonline.repository.OfferRepository;
 import spafi.springframework.magazinonline.repository.ProductRepository;
 
-/**
- * Listing lifecycle: approved sellers create and cancel listings; everyone can browse.
- */
 @Service
 public class ProductService {
 
@@ -34,7 +31,6 @@ public class ProductService {
         this.accountService = accountService;
     }
 
-    /** List a product for sale (approved sellers only). */
     @Transactional
     public ProductResponse createProduct(String sellerEmail, ProductCreateRequest request) {
         User seller = accountService.requireApprovedSeller(sellerEmail);
@@ -61,7 +57,6 @@ public class ProductService {
         return ProductResponse.from(productRepository.save(product));
     }
 
-    /** Every available product, for the public/buyer catalogue. */
     @Transactional(readOnly = true)
     public List<ProductResponse> listAvailable() {
         return productRepository.findAll().stream()
@@ -74,7 +69,6 @@ public class ProductService {
         return ProductResponse.from(requireProduct(reference));
     }
 
-    /** A seller's own listings. */
     @Transactional(readOnly = true)
     public List<ProductResponse> listOwnProducts(String sellerEmail) {
         User seller = accountService.requireApprovedSeller(sellerEmail);
@@ -83,7 +77,6 @@ public class ProductService {
                 .toList();
     }
 
-    /** Cancel (remove) one of the seller's own listings, along with any offers on it. */
     @Transactional
     public void cancelListing(String sellerEmail, String reference) {
         User seller = accountService.requireApprovedSeller(sellerEmail);

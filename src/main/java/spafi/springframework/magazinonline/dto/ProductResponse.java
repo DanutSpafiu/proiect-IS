@@ -3,11 +3,6 @@ package spafi.springframework.magazinonline.dto;
 import spafi.springframework.magazinonline.model.Product;
 import spafi.springframework.magazinonline.model.SaleType;
 
-/**
- * Public view of a product. Deliberately omits the internal numeric id and the
- * {@code minimumPrice} (requirements: neither is ever returned). The {@code reference}
- * is the product's public UUID, used to address it in purchase/offer requests.
- */
 public record ProductResponse(
         String reference,
         String name,

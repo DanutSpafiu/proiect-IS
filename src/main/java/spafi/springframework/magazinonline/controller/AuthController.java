@@ -17,10 +17,6 @@ import spafi.springframework.magazinonline.exception.ResourceNotFoundException;
 import spafi.springframework.magazinonline.repository.UserRepository;
 import spafi.springframework.magazinonline.service.AuthService;
 
-/**
- * Public registration endpoints plus an authenticated "who am I" endpoint.
- * Login itself is handled by Spring Security (HTTP Basic) on any protected request.
- */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -33,31 +29,23 @@ public class AuthController {
         this.userRepository = userRepository;
     }
 
-    /** Buyer self-registration — no approval required. */
     @PostMapping("/register/buyer")
     public ResponseEntity<UserResponse> registerBuyer(@Valid @RequestBody RegistrationRequest request) {
         UserResponse response = UserResponse.from(authService.registerBuyer(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /** Seller account request — created pending admin approval. */
     @PostMapping("/register/seller")
     public ResponseEntity<UserResponse> registerSeller(@Valid @RequestBody RegistrationRequest request) {
         UserResponse response = UserResponse.from(authService.registerSeller(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * Logs in with email + password and returns a JWT. Deactivated accounts and bad
-     * credentials are rejected; the token must then be sent as
-     * {@code Authorization: Bearer <token>} on subsequent requests.
-     */
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    /** Details of the currently authenticated account. */
     @GetMapping("/me")
     public ResponseEntity<UserResponse> currentUser(Principal principal) {
         UserResponse response = userRepository.findByEmail(principal.getName())

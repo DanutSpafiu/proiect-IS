@@ -19,10 +19,8 @@ public interface OfferRepository extends JpaRepository<Offer, Long> {
 
     Optional<Offer> findByPublicId(UUID publicId);
 
-    /** Offers across every product owned by the given seller. */
     List<Offer> findByProduct_Seller(User seller);
 
-    /** A buyer's offers on a product with a particular status (used at purchase time). */
     List<Offer> findByProductAndBuyerAndStatus(Product product, User buyer, OfferStatus status);
 
     void deleteByProduct(Product product);

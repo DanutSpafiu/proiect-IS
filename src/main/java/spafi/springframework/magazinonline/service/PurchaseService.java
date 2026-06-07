@@ -18,12 +18,6 @@ import spafi.springframework.magazinonline.repository.OfferRepository;
 import spafi.springframework.magazinonline.repository.ProductRepository;
 import spafi.springframework.magazinonline.repository.SaleHistoryRepository;
 
-/**
- * Completes purchases. A fixed-price product sells at its listed price; a negotiable
- * product can only be bought by a buyer whose offer the seller already approved, at the
- * approved price. On sale a {@link SaleHistory} snapshot is written and the product and
- * all its offers are deleted.
- */
 @Service
 public class PurchaseService {
 
@@ -60,14 +54,12 @@ public class PurchaseService {
                 .build();
         SaleHistory saved = saleHistoryRepository.save(sale);
 
-        // The listing and any offers on it are removed once the product is sold.
         offerRepository.deleteByProduct(product);
         productRepository.delete(product);
 
         return SaleHistoryResponse.from(saved);
     }
 
-    /** A buyer's completed purchases. */
     @Transactional(readOnly = true)
     public List<SaleHistoryResponse> listPurchases(String buyerEmail) {
         User buyer = accountService.requireBuyer(buyerEmail);
@@ -80,7 +72,7 @@ public class PurchaseService {
         if (product.getSaleType() == SaleType.FIXED_PRICE) {
             return product.getPrice();
         }
-        // Negotiable: require an approved offer from this buyer; sell at the agreed price.
+
         List<Offer> approved = offerRepository.findByProductAndBuyerAndStatus(
                 product, buyer, OfferStatus.APPROVED);
         if (approved.isEmpty()) {

@@ -35,3 +35,32 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Diagrams ###
+*.png
+*.pdf
+*.svg
+*.puml
+*.drawio
+*.vsdx
+*.mmd
+vp_*.py
+MagazinOnline_*
+
+### Sensitive files ###
+*.env
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+application-local.properties
+application-secret*.properties
+application-prod.properties
+secrets.properties
+*-secrets.*
+
+### Requirements ###
+REQUIREMENTS.md

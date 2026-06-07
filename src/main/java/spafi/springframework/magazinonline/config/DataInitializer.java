@@ -9,10 +9,6 @@ import spafi.springframework.magazinonline.model.Role;
 import spafi.springframework.magazinonline.model.User;
 import spafi.springframework.magazinonline.repository.UserRepository;
 
-/**
- * Seeds the single hardcoded administrator account on startup if it does not yet
- * exist: {@code admin@email.com} / {@code admin}.
- */
 @Component
 public class DataInitializer implements CommandLineRunner {
 

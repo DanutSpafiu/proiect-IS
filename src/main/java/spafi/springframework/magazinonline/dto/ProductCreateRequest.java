@@ -5,12 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import spafi.springframework.magazinonline.model.SaleType;
 
-/**
- * Request body for a seller listing a product.
- *
- * <p>{@code minimumPrice} is only meaningful for {@link SaleType#NEGOTIABLE} products;
- * the service requires it there and rejects it for fixed-price listings.
- */
 public record ProductCreateRequest(
         @NotBlank(message = "Name is required")
         String name,

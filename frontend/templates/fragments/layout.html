@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title th:text="${title}">MERIDIAN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,460;0,9..144,500;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="/css/app.css"/>
+    <link rel="icon" href="data:,"/>
+</head>
+<body>
+
+<!-- ============ Top bar ============ -->
+<header th:fragment="topbar" class="topbar">
+    <div class="wrap topbar__in">
+        <a class="brand" href="/">
+            <span class="brand__mark">MERI<b>·</b>DIAN</span>
+            <span class="brand__sub">online marketplace</span>
+        </a>
+        <nav class="nav" id="navAuth"><!-- filled by app.js --></nav>
+    </div>
+</header>
+
+<!-- ============ Footer ============ -->
+<footer th:fragment="footer" class="foot">
+    <div class="wrap foot__in">
+        <span class="brand__mark" style="font-size:1.1rem">MERI<b style="color:var(--accent)">·</b>DIAN</span>
+        <span class="foot__note">a trading floor for fixed &amp; negotiated lots · est. MMXXVI</span>
+    </div>
+</footer>
+
+</body>
+</html>
