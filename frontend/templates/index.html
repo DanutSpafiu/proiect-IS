@@ -1,47 +1,24 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Meridian — online store')}"></head>
+<head th:replace="~{fragments/layout :: head('Magazin Online')}"></head>
 <body data-page="index">
 
 <header th:replace="~{fragments/layout :: topbar}"></header>
 
 <main class="wrap">
 
-    <!-- Hero / promo banner -->
-    <section class="hero">
-        <div class="hero__banner">
-            <span class="eyebrow">fixed price &amp; negotiable deals</span>
-            <h1>Shop smart. Or make your offer.</h1>
-            <p>
-                Browse products from independent sellers. Buy fixed-price items in one click —
-                or name your price on negotiable listings and let the seller decide.
-            </p>
-            <div class="hero__actions">
-                <a class="btn btn--light" href="#catalogue">Shop now</a>
-                <a class="btn btn--ghost" href="/auth">Sell with us</a>
-            </div>
-            <div class="hero__stats">
-                <div><b id="statCount">—</b> products available</div>
-                <div><b>1-click</b> checkout for buyers</div>
-                <div><b>Free</b> to register</div>
-            </div>
-        </div>
-    </section>
+    <h1>Products</h1>
 
-    <!-- Catalogue -->
-    <section>
-        <div class="toolbar">
-            <h2>Browse the store</h2>
-            <span class="toolbar__spacer"></span>
-            <div class="filters" id="filters">
-                <button class="chip active" data-filter="all">All</button>
-                <button class="chip" data-filter="FIXED_PRICE">Fixed price</button>
-                <button class="chip" data-filter="NEGOTIABLE">Negotiable</button>
-            </div>
-            <span class="count-chip" id="catCount">loading…</span>
+    <div class="toolbar">
+        <div class="filters" id="filters">
+            <button class="chip active" data-filter="all">All</button>
+            <button class="chip" data-filter="FIXED_PRICE">Fixed price</button>
+            <button class="chip" data-filter="NEGOTIABLE">Negotiable</button>
         </div>
-        <div class="grid" id="catalogue"><!-- filled by app.js --></div>
-    </section>
+        <span class="count" id="catCount">loading...</span>
+    </div>
+
+    <ul class="grid" id="catalogue"><!-- filled by app.js --></ul>
 
 </main>
 

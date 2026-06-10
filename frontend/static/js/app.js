@@ -1,6 +1,6 @@
 /* =========================================================================
-   MERIDIAN — page logic
-   Drives the header, storefront catalogue (with filters + search), auth forms,
+   Magazin Online — page logic
+   Drives the header, storefront catalogue (filters + search), auth forms,
    and the role-aware account dashboard. All data comes from the REST API
    via api.js.
    ========================================================================= */
@@ -20,12 +20,12 @@ function initHeader() {
     const s = Session.get();
     if (s) {
         slot.innerHTML = `
-            <span class="whoami"><span class="dot"></span><b>${escapeHtml(s.email)}</b> · ${s.role.toLowerCase()}</span>
-            <a class="link" href="/dashboard">My account</a>
-            <button class="btn btn--ghost btn--sm" id="signout">Sign out</button>`;
+            <span class="whoami">${escapeHtml(s.email)} (${s.role.toLowerCase()})</span>
+            <a href="/dashboard">My account</a>
+            <button class="btn" id="signout">Sign out</button>`;
         slot.querySelector("#signout").onclick = () => { Session.clear(); location.href = "/"; };
     } else {
-        slot.innerHTML = `<a class="link" href="/">Shop</a><a class="btn btn--sm" href="/auth">Sign in</a>`;
+        slot.innerHTML = `<a href="/">Shop</a><a class="btn" href="/auth">Sign in</a>`;
     }
 }
 
@@ -34,9 +34,9 @@ const catalogue = { all: [], filter: "all", query: "" };
 
 async function initCatalogue() {
     const grid = document.getElementById("catalogue");
-    grid.innerHTML = skeletons(8);
+    grid.innerHTML = `<li class="count">Loading...</li>`;
 
-    // Filter chips
+    // Filter buttons
     document.querySelectorAll("#filters .chip").forEach(chip => {
         chip.onclick = () => {
             document.querySelectorAll("#filters .chip").forEach(c => c.classList.remove("active"));
@@ -52,17 +52,15 @@ async function initCatalogue() {
 
     try {
         catalogue.all = await Api.products();
-        const stat = document.getElementById("statCount");
-        if (stat) stat.textContent = catalogue.all.length;
         renderCatalogue();
     } catch (e) {
-        grid.innerHTML = emptyState("Couldn’t load the store", e.message);
+        grid.innerHTML = emptyState("Couldn't load the store", e.message);
     }
 }
 
 function renderCatalogue() {
     const grid = document.getElementById("catalogue");
-    const chip = document.getElementById("catCount");
+    const count = document.getElementById("catCount");
 
     let items = catalogue.all;
     if (catalogue.filter !== "all") items = items.filter(p => p.saleType === catalogue.filter);
@@ -70,46 +68,39 @@ function renderCatalogue() {
         (p.name || "").toLowerCase().includes(catalogue.query) ||
         (p.description || "").toLowerCase().includes(catalogue.query));
 
-    if (chip) chip.textContent = `${items.length} ${items.length === 1 ? "product" : "products"}`;
+    if (count) count.textContent = `${items.length} ${items.length === 1 ? "product" : "products"}`;
 
     if (!items.length) {
         grid.innerHTML = catalogue.all.length
             ? emptyState("No matches", "Try a different search or filter.")
-            : emptyState("The store is empty", "No products are listed right now. Check back soon.");
+            : emptyState("The store is empty", "No products are listed right now.");
         return;
     }
     grid.innerHTML = "";
-    items.forEach((p, i) => grid.appendChild(productCard(p, i)));
+    items.forEach(p => grid.appendChild(productCard(p)));
 }
 
-function productCard(p, i) {
+function productCard(p) {
     const isBuyer = Session.role === "BUYER";
     const negotiable = p.saleType === "NEGOTIABLE";
-    const card = document.createElement("article");
-    card.className = "product reveal";
-    card.style.animationDelay = (i % 8 * 50) + "ms";
+    const card = document.createElement("li");
+    card.className = "product";
 
     let actions = "";
-    if (isBuyer && negotiable) actions = `<button class="btn btn--sm" data-act="offer">Make an offer</button>`;
-    else if (isBuyer && !negotiable) actions = `<button class="btn btn--sm" data-act="buy">Buy now</button>`;
-    else if (!Session.get()) actions = `<a class="btn btn--ghost btn--sm" href="/auth">Sign in to ${negotiable ? "offer" : "buy"}</a>`;
-
-    const [c1, c2] = thumbColors(p.name);
-    const monogram = (p.name || "?").trim().charAt(0).toUpperCase();
+    if (isBuyer && negotiable) actions = `<button class="btn" data-act="offer">Make an offer</button>`;
+    else if (isBuyer && !negotiable) actions = `<button class="btn" data-act="buy">Buy now</button>`;
+    else if (!Session.get()) actions = `<a class="btn" href="/auth">Sign in to ${negotiable ? "offer" : "buy"}</a>`;
 
     card.innerHTML = `
-        <div class="product__thumb" style="--c1:${c1};--c2:${c2}">
-            <span class="product__badge ${negotiable ? "badge--negotiable" : "badge--fixed"}">${negotiable ? "Negotiable" : "Fixed price"}</span>
-            <span class="product__monogram">${escapeHtml(monogram)}</span>
-        </div>
-        <div class="product__body">
-            <span class="product__seller">${escapeHtml(p.sellerEmail)}</span>
-            <h3 class="product__name">${escapeHtml(p.name)}</h3>
-            <p class="product__desc">${escapeHtml(p.description || "No description provided.")}</p>
-            <div class="product__foot">
+        <span class="product__seller">Sold by ${escapeHtml(p.sellerEmail)}</span>
+        <h3 class="product__name">${escapeHtml(p.name)}</h3>
+        <p class="product__desc">${escapeHtml(p.description || "No description provided.")}</p>
+        <div class="product__foot">
+            <span>
                 <span class="price">${money(p.price)}</span>
-                ${actions}
-            </div>
+                <span class="tag">${negotiable ? "Negotiable" : "Fixed price"}</span>
+            </span>
+            ${actions}
         </div>`;
 
     const offerBtn = card.querySelector('[data-act="offer"]');
@@ -119,33 +110,25 @@ function productCard(p, i) {
     return card;
 }
 
-/* Deterministic pastel gradient from the product name — gives every card a
-   distinct, stable "cover" without needing real product images. */
-function thumbColors(name) {
-    let h = 0;
-    for (const ch of String(name || "")) h = (h * 31 + ch.charCodeAt(0)) % 360;
-    return [`hsl(${h} 62% 58%)`, `hsl(${(h + 42) % 360} 64% 52%)`];
-}
-
 async function makeOffer(p) {
-    const price = await priceModal("Make an offer", `On “${p.name}”. Asking price ${Number(p.price).toFixed(2)} RON. Offers below the seller’s private minimum are discarded.`, "Your offer (RON)");
+    const price = await priceModal("Make an offer", `On "${p.name}". Asking price ${Number(p.price).toFixed(2)} RON. Offers below the seller's private minimum are discarded.`, "Your offer (RON)");
     if (price == null) return;
     try {
         const r = await Api.submitOffer(p.reference, price);
         if (r.reference === null && r.status === "REJECTED") {
-            toast("err", "Below minimum", "Your offer was below the seller’s minimum and was not recorded.");
+            toast("err", "Below minimum", "Your offer was below the seller's minimum and was not recorded.");
         } else {
-            toast("ok", "Offer submitted", "Pending the seller’s review. Track it in your account.");
+            toast("ok", "Offer submitted", "Pending the seller's review. Track it in your account.");
         }
-    } catch (e) { toast("err", "Couldn’t submit", e.message); }
+    } catch (e) { toast("err", "Couldn't submit", e.message); }
 }
 
 async function buyNow(p) {
-    const ok = await confirmModal("Confirm purchase", `Buy “${p.name}” for ${Number(p.price).toFixed(2)} RON?`, "Buy now");
+    const ok = await confirmModal("Confirm purchase", `Buy "${p.name}" for ${Number(p.price).toFixed(2)} RON?`, "Buy now");
     if (!ok) return;
     try {
         await Api.purchase(p.reference);
-        toast("ok", "Purchased", `“${p.name}” is yours. Your receipt is in your account.`);
+        toast("ok", "Purchased", `"${p.name}" is yours. Your receipt is in your account.`);
         initCatalogue();
     } catch (e) { toast("err", "Purchase failed", e.message); }
 }
@@ -183,7 +166,7 @@ function initAuth() {
                 await Api.registerBuyer(email, password);
                 const s = await Api.login(email, password);
                 Session.set(s);
-                toast("ok", "Account created", "You’re signed in. Happy shopping.");
+                toast("ok", "Account created", "You're signed in. Happy shopping.");
                 setTimeout(() => location.href = "/dashboard", 600);
             } else {
                 await Api.registerSeller(email, password);
@@ -191,7 +174,7 @@ function initAuth() {
                 document.querySelector('.tabs button[data-tab="login"]').click();
                 loginForm.email.value = email;
             }
-        } catch (e) { toast("err", "Couldn’t register", e.message); }
+        } catch (e) { toast("err", "Couldn't register", e.message); }
     };
 }
 
@@ -235,7 +218,7 @@ function initDashboard() {
     if (views[0]) run(views[0]);
 
     async function run(v) {
-        panel.innerHTML = `<div class="list">${skeletonRows(3)}</div>`;
+        panel.innerHTML = `<p class="count">Loading...</p>`;
         try { await v.render(panel); }
         catch (e) {
             if (e.status === 403) panel.innerHTML = noticeBanner(e.message);
@@ -248,20 +231,20 @@ function initDashboard() {
 async function renderBuyerOffers(panel) {
     const offers = await Api.myOffers();
     if (!offers.length) return void (panel.innerHTML = emptyState("No offers yet", "Browse the store and make an offer on a negotiable product."));
-    panel.innerHTML = `<div class="list"></div>`;
+    panel.innerHTML = `<ul class="list"></ul>`;
     const list = panel.querySelector(".list");
     offers.forEach(o => {
-        const row = document.createElement("div");
-        row.className = "row reveal";
+        const row = document.createElement("li");
+        row.className = "row";
         const canBuy = o.status === "APPROVED";
         row.innerHTML = `
-            <div class="row__main">
+            <div>
                 <span class="row__title">Offer · ${money(o.proposedPrice)}</span>
                 <span class="row__meta">product ${shortRef(o.productReference)} · offer ${shortRef(o.reference)}</span>
             </div>
             <div class="row__actions">
                 ${stamp(o.status)}
-                ${canBuy ? `<button class="btn btn--sm" data-buy="${o.productReference}">Complete purchase</button>` : ""}
+                ${canBuy ? `<button class="btn" data-buy="${o.productReference}">Complete purchase</button>` : ""}
             </div>`;
         const buy = row.querySelector("[data-buy]");
         if (buy) buy.onclick = async () => {
@@ -275,13 +258,13 @@ async function renderBuyerOffers(panel) {
 async function renderBuyerPurchases(panel) {
     const sales = await Api.myPurchases();
     if (!sales.length) return void (panel.innerHTML = emptyState("No orders yet", "Your receipts will appear here."));
-    panel.innerHTML = `<div class="list"></div>`;
+    panel.innerHTML = `<ul class="list"></ul>`;
     const list = panel.querySelector(".list");
     sales.forEach(x => {
-        const row = document.createElement("div");
-        row.className = "row reveal";
+        const row = document.createElement("li");
+        row.className = "row";
         row.innerHTML = `
-            <div class="row__main">
+            <div>
                 <span class="row__title">${escapeHtml(x.productName)}</span>
                 <span class="row__meta">${escapeHtml(x.productDescription || "")} · sold by ${escapeHtml(x.sellerEmail)} · ${fmtDate(x.soldAt)}</span>
             </div>
@@ -294,32 +277,32 @@ async function renderBuyerPurchases(panel) {
 async function renderSellerListings(panel) {
     const products = await Api.sellerProducts();
     panel.innerHTML = `
-        <div class="section-head" style="margin-bottom:1.2rem">
-            <span class="count-chip">${products.length} active ${products.length === 1 ? "listing" : "listings"}</span>
-            <button class="btn btn--sm" id="newListing">+ New listing</button>
+        <div class="toolbar">
+            <span class="count">${products.length} active ${products.length === 1 ? "listing" : "listings"}</span>
+            <button class="btn" id="newListing">+ New listing</button>
         </div>
-        <div class="list"></div>`;
+        <ul class="list"></ul>`;
     panel.querySelector("#newListing").onclick = () => newListingModal(() => renderSellerListings(panel));
     const list = panel.querySelector(".list");
     if (!products.length) { list.innerHTML = emptyState("Nothing listed", "Add your first product to the store."); return; }
     products.forEach(p => {
         const negotiable = p.saleType === "NEGOTIABLE";
-        const row = document.createElement("div");
-        row.className = "row reveal";
+        const row = document.createElement("li");
+        row.className = "row";
         row.innerHTML = `
-            <div class="row__main">
+            <div>
                 <span class="row__title">${escapeHtml(p.name)}</span>
                 <span class="row__meta">${shortRef(p.reference)} · ${escapeHtml(p.description || "no description")}</span>
             </div>
             <div class="row__actions">
-                <span class="tag ${negotiable ? "tag--negotiable" : "tag--fixed"}">${negotiable ? "negotiable" : "fixed"}</span>
+                <span class="tag">${negotiable ? "negotiable" : "fixed"}</span>
                 <span class="price">${money(p.price)}</span>
-                <button class="btn btn--danger btn--sm" data-cancel="${p.reference}">Remove</button>
+                <button class="btn btn--danger" data-cancel="${p.reference}">Remove</button>
             </div>`;
         row.querySelector("[data-cancel]").onclick = async () => {
-            if (!await confirmModal("Remove listing", `Remove “${p.name}” from the store? Offers on it are discarded.`, "Remove listing")) return;
-            try { await Api.cancelListing(p.reference); toast("ok", "Listing removed", `“${p.name}” is no longer for sale.`); renderSellerListings(panel); }
-            catch (e) { toast("err", "Couldn’t remove", e.message); }
+            if (!await confirmModal("Remove listing", `Remove "${p.name}" from the store? Offers on it are discarded.`, "Remove listing")) return;
+            try { await Api.cancelListing(p.reference); toast("ok", "Listing removed", `"${p.name}" is no longer for sale.`); renderSellerListings(panel); }
+            catch (e) { toast("err", "Couldn't remove", e.message); }
         };
         list.appendChild(row);
     });
@@ -328,21 +311,21 @@ async function renderSellerListings(panel) {
 async function renderSellerOffers(panel) {
     const offers = await Api.sellerOffers();
     if (!offers.length) return void (panel.innerHTML = emptyState("No offers yet", "Offers on your negotiable products show up here."));
-    panel.innerHTML = `<div class="list"></div>`;
+    panel.innerHTML = `<ul class="list"></ul>`;
     const list = panel.querySelector(".list");
     offers.forEach(o => {
         const pending = o.status === "PENDING";
-        const row = document.createElement("div");
-        row.className = "row reveal";
+        const row = document.createElement("li");
+        row.className = "row";
         row.innerHTML = `
-            <div class="row__main">
+            <div>
                 <span class="row__title">${money(o.proposedPrice)}</span>
                 <span class="row__meta">from ${escapeHtml(o.buyerEmail)} · product ${shortRef(o.productReference)}</span>
             </div>
             <div class="row__actions">
                 ${pending ? `
-                    <button class="btn btn--sm" data-approve="${o.reference}">Approve</button>
-                    <button class="btn btn--danger btn--sm" data-reject="${o.reference}">Reject</button>
+                    <button class="btn" data-approve="${o.reference}">Approve</button>
+                    <button class="btn btn--danger" data-reject="${o.reference}">Reject</button>
                 ` : stamp(o.status)}
             </div>`;
         const ap = row.querySelector("[data-approve]"), rj = row.querySelector("[data-reject]");
@@ -360,23 +343,23 @@ async function renderSellerOffers(panel) {
 async function renderAdminSellers(panel) {
     const sellers = await Api.sellers();
     if (!sellers.length) return void (panel.innerHTML = emptyState("No sellers yet", "Seller account requests will appear here."));
-    panel.innerHTML = `<div class="list"></div>`;
+    panel.innerHTML = `<ul class="list"></ul>`;
     const list = panel.querySelector(".list");
     sellers.forEach(u => {
-        const row = document.createElement("div");
-        row.className = "row reveal";
+        const row = document.createElement("li");
+        row.className = "row";
         const state = !u.active ? `<span class="stamp stamp--rejected">deactivated</span>`
             : u.approved ? `<span class="stamp stamp--approved">approved</span>`
             : `<span class="stamp stamp--pending">awaiting</span>`;
         row.innerHTML = `
-            <div class="row__main">
+            <div>
                 <span class="row__title">${escapeHtml(u.email)}</span>
                 <span class="row__meta">role ${u.role.toLowerCase()}</span>
             </div>
             <div class="row__actions">
                 ${state}
-                ${!u.approved && u.active ? `<button class="btn btn--sm" data-approve>Approve</button>` : ""}
-                ${u.active ? `<button class="btn btn--danger btn--sm" data-deact>Deactivate</button>` : ""}
+                ${!u.approved && u.active ? `<button class="btn" data-approve>Approve</button>` : ""}
+                ${u.active ? `<button class="btn btn--danger" data-deact>Deactivate</button>` : ""}
             </div>`;
         const ap = row.querySelector("[data-approve]"), de = row.querySelector("[data-deact]");
         if (ap) ap.onclick = () => adminDo(() => Api.approveSeller(u.email), "Seller approved", panel);
@@ -397,13 +380,9 @@ function stamp(status) {
     const cls = status === "APPROVED" ? "approved" : status === "REJECTED" ? "rejected" : "pending";
     return `<span class="stamp stamp--${cls}">${status.toLowerCase()}</span>`;
 }
-function skeletons(n) { return Array.from({ length: n }, () => `<div class="product skeleton" style="height:330px;border:0"></div>`).join(""); }
-function skeletonRows(n) { return Array.from({ length: n }, () => `<div class="row skeleton" style="height:64px;border:0"></div>`).join(""); }
 function emptyState(title, sub) { return `<div class="empty"><span class="empty__title">${escapeHtml(title)}</span>${escapeHtml(sub || "")}</div>`; }
 function noticeBanner(msg) {
-    return `<div class="panel" style="border-left:4px solid var(--pending)">
-        <span class="eyebrow" style="color:var(--pending)">Awaiting approval</span>
-        <p style="margin-top:.5rem;color:var(--ink-soft)">${escapeHtml(msg)}</p></div>`;
+    return `<div class="notice"><b>Awaiting approval</b><p style="margin:.5rem 0 0">${escapeHtml(msg)}</p></div>`;
 }
 function fmtDate(s) { try { return new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); } catch { return s; } }
 
@@ -411,7 +390,7 @@ function fmtDate(s) { try { return new Date(s).toLocaleString(undefined, { dateS
 function showModal(inner, setup) {
     const back = document.createElement("div");
     back.className = "modal-back";
-    back.innerHTML = `<div class="modal panel">${inner}</div>`;
+    back.innerHTML = `<div class="modal">${inner}</div>`;
     document.body.appendChild(back);
     const close = () => back.remove();
     back.addEventListener("click", e => { if (e.target === back) close(); });
@@ -426,7 +405,7 @@ function priceModal(title, subtitle, label) {
             <form><div class="field"><label>${escapeHtml(label)}</label>
             <input name="price" type="number" min="0.01" step="0.01" required autofocus></div>
             <div class="role-toggle" style="margin-top:.5rem">
-                <button type="button" class="btn btn--ghost" data-x style="flex:1">Cancel</button>
+                <button type="button" class="btn" data-x style="flex:1">Cancel</button>
                 <button type="submit" class="btn" style="flex:1">Submit</button>
             </div></form>`, (m, close) => {
             m.querySelector("[data-x]").onclick = () => { close(); resolve(null); };
@@ -440,7 +419,7 @@ function confirmModal(title, subtitle, confirmLabel) {
         showModal(`
             <h3>${escapeHtml(title)}</h3><p>${escapeHtml(subtitle)}</p>
             <div class="role-toggle">
-                <button class="btn btn--ghost" data-x style="flex:1">Cancel</button>
+                <button class="btn" data-x style="flex:1">Cancel</button>
                 <button class="btn" data-ok style="flex:1">${escapeHtml(confirmLabel)}</button>
             </div>`, (m, close) => {
             m.querySelector("[data-x]").onclick = () => { close(); resolve(false); };
@@ -460,7 +439,7 @@ function newListingModal(onDone) {
                 <select name="saleType"><option value="FIXED_PRICE">Fixed price</option><option value="NEGOTIABLE">Negotiable</option></select></div>
             <div class="field" id="minWrap" style="display:none"><label>Minimum price (private)</label><input name="minimumPrice" type="number" min="0.01" step="0.01"></div>
             <div class="role-toggle" style="margin-top:.3rem">
-                <button type="button" class="btn btn--ghost" data-x style="flex:1">Cancel</button>
+                <button type="button" class="btn" data-x style="flex:1">Cancel</button>
                 <button type="submit" class="btn" style="flex:1">List it</button>
             </div>
         </form>`, (m, close) => {
@@ -476,8 +455,8 @@ function newListingModal(onDone) {
                 saleType: f.saleType.value,
                 minimumPrice: f.saleType.value === "NEGOTIABLE" ? parseFloat(f.minimumPrice.value) : null,
             };
-            try { await Api.createProduct(body); close(); toast("ok", "Listed", `“${body.name}” is now in the store.`); onDone && onDone(); }
-            catch (err) { toast("err", "Couldn’t list", err.message); }
+            try { await Api.createProduct(body); close(); toast("ok", "Listed", `"${body.name}" is now in the store.`); onDone && onDone(); }
+            catch (err) { toast("err", "Couldn't list", err.message); }
         };
     });
 }

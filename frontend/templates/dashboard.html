@@ -1,17 +1,15 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Meridian — my account')}"></head>
+<head th:replace="~{fragments/layout :: head('Magazin Online — my account')}"></head>
 <body data-page="dashboard">
 
 <header th:replace="~{fragments/layout :: topbar}"></header>
 
 <main class="wrap">
-    <section class="dash-head">
-        <span class="eyebrow">my account · <span id="dashRole">—</span></span>
-        <h1>Hi, <span class="who" id="dashWho">—</span></h1>
-    </section>
+    <h1>Hi, <span id="dashWho">—</span></h1>
+    <p class="count">Role: <span id="dashRole">—</span></p>
 
-    <div class="dash-tabs" id="dashTabs"><!-- tabs injected by app.js --></div>
+    <div class="tabs" id="dashTabs"><!-- tabs injected by app.js --></div>
     <div id="dashPanel"><!-- panel injected by app.js --></div>
 </main>
 

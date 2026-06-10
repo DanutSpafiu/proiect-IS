@@ -1,10 +1,10 @@
 /* =========================================================================
-   MERIDIAN — API client
+   Magazin Online — API client
    Thin wrapper over the stateless JWT REST backend (/api/**). Stores the token
    client-side and attaches it as a Bearer header. Same origin → no CORS.
    ========================================================================= */
 
-const KEY = "meridian.session";
+const KEY = "magazinonline.session";
 
 const Session = {
     get() {
@@ -88,7 +88,6 @@ const Api = {
     deactivateSeller: (email) => request("POST", `/api/admin/sellers/${encodeURIComponent(email)}/deactivate`),
 };
 
-/* ---------- UI helpers shared across pages ---------- */
 function toast(kind, title, msg) {
     let stack = document.querySelector(".toast-stack");
     if (!stack) { stack = document.createElement("div"); stack.className = "toast-stack"; document.body.appendChild(stack); }
@@ -100,7 +99,7 @@ function toast(kind, title, msg) {
 }
 
 function money(v) {
-    return `${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="cur">RON</span>`;
+    return `${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RON`;
 }
 function escapeHtml(s) {
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

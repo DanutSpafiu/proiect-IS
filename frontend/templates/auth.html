@@ -1,57 +1,54 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Meridian — sign in')}"></head>
+<head th:replace="~{fragments/layout :: head('Magazin Online — sign in')}"></head>
 <body data-page="auth">
 
 <header th:replace="~{fragments/layout :: topbar}"></header>
 
 <main class="wrap">
-    <div class="auth-shell">
-        <span class="eyebrow">your account</span>
-        <h1>Welcome to Meridian</h1>
+    <h1>Your account</h1>
 
-        <div class="panel">
-            <div class="tabs">
-                <button class="active" data-tab="login">Sign in</button>
-                <button data-tab="register">Create account</button>
-            </div>
-
-            <!-- Login -->
-            <form id="loginForm">
-                <div class="field">
-                    <label>Email</label>
-                    <input name="email" type="email" required autocomplete="email" placeholder="you@example.com"/>
-                </div>
-                <div class="field">
-                    <label>Password</label>
-                    <input name="password" type="password" required autocomplete="current-password" placeholder="••••••"/>
-                </div>
-                <button class="btn btn--block" type="submit">Sign in</button>
-            </form>
-
-            <!-- Register -->
-            <form id="regForm" style="display:none">
-                <div class="field">
-                    <label>I want to</label>
-                    <div class="role-toggle">
-                        <label><input type="radio" name="role" value="buyer" checked/><span>Buy products</span></label>
-                        <label><input type="radio" name="role" value="seller"/><span>Sell products</span></label>
-                    </div>
-                </div>
-                <div class="field">
-                    <label>Email</label>
-                    <input name="email" type="email" required autocomplete="email" placeholder="you@example.com"/>
-                </div>
-                <div class="field">
-                    <label>Password</label>
-                    <input name="password" type="password" required minlength="4" autocomplete="new-password" placeholder="at least 4 characters"/>
-                </div>
-                <button class="btn btn--block" type="submit">Create account</button>
-                <p class="foot__note" style="margin-top:1rem;line-height:1.6">
-                    Buyers can shop immediately. Seller accounts are reviewed by an administrator before you can list products.
-                </p>
-            </form>
+    <div class="panel">
+        <div class="tabs">
+            <button class="active" data-tab="login">Sign in</button>
+            <button data-tab="register">Create account</button>
         </div>
+
+        <!-- Login -->
+        <form id="loginForm">
+            <div class="field">
+                <label>Email</label>
+                <input name="email" type="email" required autocomplete="email" placeholder="you@example.com"/>
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input name="password" type="password" required autocomplete="current-password"/>
+            </div>
+            <button class="btn btn--block" type="submit">Sign in</button>
+        </form>
+
+        <!-- Register -->
+        <form id="regForm" style="display:none">
+            <div class="field">
+                <label>I want to</label>
+                <div class="role-toggle">
+                    <label><input type="radio" name="role" value="buyer" checked/> Buy products</label>
+                    <label><input type="radio" name="role" value="seller"/> Sell products</label>
+                </div>
+            </div>
+            <div class="field">
+                <label>Email</label>
+                <input name="email" type="email" required autocomplete="email" placeholder="you@example.com"/>
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input name="password" type="password" required minlength="4" autocomplete="new-password" placeholder="at least 4 characters"/>
+            </div>
+            <button class="btn btn--block" type="submit">Create account</button>
+            <p class="count" style="margin-top:1rem">
+                Buyers can shop immediately. Seller accounts are reviewed by an administrator before you can list products.
+            </p>
+        </form>
     </div>
 </main>
 

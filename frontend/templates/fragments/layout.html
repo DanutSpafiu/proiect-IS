@@ -3,10 +3,7 @@
 <head th:fragment="head(title)">
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title th:text="${title}">MERIDIAN</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com"/>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"/>
+    <title th:text="${title}">Magazin Online</title>
     <link rel="stylesheet" href="/css/app.css"/>
     <link rel="icon" href="data:,"/>
 </head>
@@ -14,17 +11,10 @@
 
 <!-- ============ Top bar ============ -->
 <header th:fragment="topbar" class="topbar">
-    <div class="wrap topbar__in">
-        <a class="brand" href="/">
-            <span class="brand__logo">M</span>
-            <span>
-                <span class="brand__mark">Meri<b>dian</b></span>
-                <span class="brand__sub">online store</span>
-            </span>
-        </a>
+    <div class="topbar__in">
+        <a class="brand" href="/">Magazin Online</a>
         <form class="topbar__search" id="searchForm" onsubmit="return false">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
-            <input id="searchInput" type="search" placeholder="Search products…" autocomplete="off"/>
+            <input id="searchInput" type="search" placeholder="Search products..." autocomplete="off"/>
         </form>
         <nav class="nav" id="navAuth"><!-- filled by app.js --></nav>
     </div>
@@ -32,13 +22,7 @@
 
 <!-- ============ Footer ============ -->
 <footer th:fragment="footer" class="foot">
-    <div class="wrap foot__in">
-        <a class="brand" href="/">
-            <span class="brand__logo">M</span>
-            <span class="brand__mark">Meri<b>dian</b></span>
-        </a>
-        <span class="foot__note">Buy fixed-price goods or negotiate the price · prices in RON · © MMXXVI</span>
-    </div>
+    Magazin Online — buy fixed-price goods or negotiate the price. Prices in RON.
 </footer>
 
 </body>
